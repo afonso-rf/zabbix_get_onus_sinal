@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
-#%%
+'''Gerador de relatorio de sinal rx das ONUs
+
+Coleta os hosts ativos no Zabbix contendo "OLT" no nome e em seguida faz
+uma busca pelos os itens com as tags "ONU: Sinal" e "ONU: PON" para gerar
+um arquivo CSV.
+'''
+__version__ = "1.0.0"
+__author__ = "Afonso R Filho"
+
 from dotenv import load_dotenv
 from pyzabbix import ZabbixAPI
 from datetime import datetime
@@ -9,7 +17,6 @@ import os
 import re
 import csv
 
-#%%
 # Variables
 load_dotenv()
 url = os.getenv("URL")
@@ -24,7 +31,6 @@ item_tags = [
     {"tag": "ONU", "value": "PON"}
     ]
 
-#%%
 # Zabbix connect
 zapi = ZabbixAPI(url)
 zapi.login(
@@ -35,7 +41,6 @@ zapi.login(
 print(f"Connected to Zabbix API Version {zapi.api_version()}.")
 sleep(1)
 
-#%%
 print("Collecting the hosts")
 # Collecting the hosts
 get_hosts = zapi.host.get(
@@ -47,7 +52,6 @@ get_hosts = zapi.host.get(
 
 hosts = {info["hostid"]: info["host"] for info in tqdm(get_hosts, ncols=70)}
 
-#%%
 print(f"Collecting item info from {len(hosts)} hosts")
 get_items = []
 for info in tqdm(get_hosts, ncols=70):
@@ -59,7 +63,6 @@ for info in tqdm(get_hosts, ncols=70):
     if item:
         get_items.append(item)
 
-#%%
 print(f"Organizing the collected information ({len(get_items)}).")
 onu_list = []
 for info in tqdm(get_items, ncols=70):
@@ -69,17 +72,17 @@ for info in tqdm(get_items, ncols=70):
             if item:
                 exist = False
                 onu_id = re.search("\[(.*)\]", item["key_"]).group(1)
-                for i in range(len(onus)):
-                    if "id" in onus[i]:
-                        if onu_id == onus[i]["id"]:
-                            if not "sinal" in onus[i]:
-                                onus[i]["sinal"] = item["lastvalue"]
-                            if not "pon" in onus[i]:
-                                onus[i]["pon"] = item["lastvalue"]
+                for onu in onus:
+                    if "id" in onu:
+                        if onu_id == onu["id"]:
+                            if not "sinal" in onu:
+                                onu["sinal"] = item["lastvalue"]
+                            if not "pon" in onu:
+                                onu["pon"] = item["lastvalue"]
                             exist = True
 
                 if not exist:
-                    onu = {}
+                    onu = dict()
                     onu["id"] = onu_id
                     if "sinalonu" in item["key_"].lower():
                         onu["sinal"] = item["lastvalue"]
@@ -91,7 +94,6 @@ for info in tqdm(get_items, ncols=70):
         if onus:
             onu_list.append(onus)
 
-#%%
 print("Preparing the info for writing")
 list_result = []  # HOST, ONU, SINAL, PON
 for host in tqdm(range(len(onu_list)), ncols=70):
@@ -107,7 +109,7 @@ for host in tqdm(range(len(onu_list)), ncols=70):
             else ""
         )
 
-#%%
+# 
 today = datetime.strftime(datetime.now(), "%Y-%m-%d")
 file_csv = f"onu_sinal_{today}"
 print(len(onu_list))
@@ -137,4 +139,3 @@ else:
         for row in tqdm(range(total_rows), ncols=70):
             if len(list_result[row]):
                 csv.writer(csvfile, delimiter=",").writerow(list_result[row])
-#%%
