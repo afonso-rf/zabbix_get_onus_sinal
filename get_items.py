@@ -5,7 +5,7 @@ Coleta os hosts ativos no Zabbix contendo "OLT" no nome e em seguida faz
 uma busca pelos os itens com as tags "ONU: Sinal" e "ONU: PON" para gerar
 um arquivo CSV.
 """
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 __author__ = "Afonso R Filho"
 
 from dotenv import load_dotenv
@@ -61,16 +61,18 @@ onu_list = []
 for info in tqdm(get_items, ncols=70):
     if info:
         onus = []
-        set_onu = set()
+        onu_ids = set()
         for item in info:
             if item:
                 onu_id = re.search("\[(.*)\]", item["key_"]).group(1)
-                if onu_id in set_onu:
-                    if onu_id == onu["id"]:
-                        if not "sinal" in onu:
-                            onu["sinal"] = item["lastvalue"]
-                        if not "pon" in onu:
-                            onu["pon"] = item["lastvalue"]
+                if onu_id in onu_ids:
+                    for onu in onus:
+                        if onu_id == onu["id"]:
+                            if not "sinal" in onu:
+                                onu["sinal"] = item["lastvalue"]
+                            if not "pon" in onu:
+                                onu["pon"] = item["lastvalue"]
+                            break
                 else:
                     onu = dict()
                     onu["id"] = onu_id
@@ -81,7 +83,7 @@ for info in tqdm(get_items, ncols=70):
                     onu["name"] = re.search(":: (.*) ::", item["name"]).group(1).strip()
                     onu["host"] = hosts[item["hostid"]]
                     onus.append(onu)
-                    set_onu.add(onu_id)
+                    onu_ids.add(onu_id)
 
         if onus:
             onu_list.append(onus)
