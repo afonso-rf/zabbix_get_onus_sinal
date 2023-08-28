@@ -3,3 +3,6 @@
 .env
 onu_sinal*
 *.rar
+*test*
+*.csv
+*/*.txt
