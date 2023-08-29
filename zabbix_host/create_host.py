@@ -53,13 +53,13 @@ file_csv = os.path.join(path, filename)
 
 
 # %%
-def file_csv_to_list(file_csv):
+def file_csv_to_list(file_csv, delimiter=","):
     result = []
-    for line in open(file_csv, encoding="UTF-8").readlines():
-        result.append(line.rstrip("\n").split(";"))
+    for line in open(file_csv, encoding="UTF-8"):
+        result.append(line.rstrip("\n").split(delimiter))
     return result
 
-host_list = file_csv_to_list(file_csv)
+
 #%%
 def host_tmpl(host: list):
     parms = dict()
@@ -207,6 +207,8 @@ pp(f"Connected to Zabbix API Version {zapi.api_version()}.")
 
 # %%
 result = [["HOST NAME", "STATUS"]]
+
+host_list = file_csv_to_list(file_csv, ";")
 # Addcion hosts
 for i in range(1, len(host_list)):
     host_date = host_tmpl(host_list[i])
