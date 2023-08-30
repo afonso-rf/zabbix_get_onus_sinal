@@ -16,29 +16,23 @@ python -m pip install -r requirements.txt
 ```
 &nbsp;
 
-O link e as credenciais do Zabbix deverão ser adiconadas no aquivo `.env`.
+O link e as credenciais do Zabbix poderão ser adiconadas no aquivo `file_urs.csv`.
 Crie o arquivo no mesmo diretorio onde o script está.  
 ```bash
-touch .env
+touch file_urs.csv
 ```
 &nbsp;
-Abra o arvivo `.env` com o editor de sua prefenecia e adicone as variaveis abaixo.
+Abra o arvivo `file_urs.csv` com o editor de sua prefenecia e preencha as informações coforme abaixo.
 
-|                 |        |                                           |
-| :-------------- | :----: | :---------------------------------------- |
-| `URL`           | string | Obrigatorio                               |
-| `ZBX_USERNAME`  | string | Não é necessairo caso ultilize TOKEN      |
-| `ZBX_PASSWD`    | string | Não é necessairo caso ultilize TOKEN      |
-| `ZBX_TOKEN_API` | string | Não é necessairo caso ultilize user/senha |
+Zabbix name, url e api Token (opcional) separados por `,`.
 
 ```bash
-URL = 
-ZBX_USERNAME = 
-ZBX_PASSWD = 
-ZBX_TOKEN_API =
+zabbixName,url,apiToken
+Telecom,http://192.168.0.10:8080,
 ```
+**Atenção** a primeira linha do arquivo é considerada titulo ou cabeçalho, então será ignorada.
 &nbsp;
-Os filtros são colocados no `get_items.py`. Altere de acordo com a configuração do seu Zabbix.
+Os filtros para coleta são colocados no `get_items.py`. Altere de acordo com a configuração do seu Zabbix.
 ```python
 search_host = {"name": "OLT"}
 

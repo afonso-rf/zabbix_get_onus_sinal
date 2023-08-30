@@ -4,38 +4,156 @@
 Coleta os hosts ativos no Zabbix contendo "OLT" no nome e em seguida faz
 uma busca pelos os itens com as tags "ONU: Sinal" e "ONU: PON" para gerar
 um arquivo CSV.
+
+As url de servidores poderão ser lidas do arquivo `file_url.csv` ou 
+informadas via interação.
 """
-__version__ = "1.0.2"
+__version__ = "1.2.0"
 __author__ = "Afonso R Filho"
 
-from dotenv import load_dotenv
 from pyzabbix import ZabbixAPI
 from datetime import datetime
 from time import sleep
 from tqdm import tqdm
+from getpass import getpass
 import os
+import sys
 import re
-import csv
 
 # Variables
-load_dotenv()
-url = os.getenv("URL")
-username = os.getenv("ZBX_USERNAME") or None
-passwd = os.getenv("ZBX_PASSWD") or None
-api_token = os.getenv("ZBX_TOKEN_API") or None
+path = os.curdir
+file_url = os.path.join(path, "file_url.csv")
 
 search_host = {"name": "OLT"}
 
 item_tags = [{"tag": "ONU", "value": "Sinal"}, {"tag": "ONU", "value": "PON"}]
 
-# Zabbix connect
-zapi = ZabbixAPI(url)
-zapi.login(user=username, password=passwd, api_token=api_token)
-print(f"Connected to Zabbix API Version {zapi.api_version()}.")
-sleep(1)
+def csv_to_list(filecsv, delimiter=","):
+    result = []
+    with open(filecsv, encoding="utf-8") as file_:
+        for line in file_:
+            result.append(line.strip("\n").split(delimiter))
 
-print("Collecting the hosts")
+    return result
+
+try:
+    url_list = csv_to_list(file_url)
+    try:
+        if len(url_list[1:]) > 1:
+            while True:
+                    os.system("clear")
+                    print("#" * 40)
+                    print(f"#{'Escolha um dos servidores abaixo':^38}#")
+                    print("#" * 40)
+                    print()
+                    for i in range(1,len(url_list)):
+                        print(f" [ {i} ] - Zabbix {url_list[i][0].upper()}")
+                    print()
+                    index = input("Escolha o zabbix desejado (Crtl+C sair): ").strip()
+                    if index.isdigit() and 0 < int(index) < len(url_list):
+                        server = int(index)
+                        break
+                    else:
+                        print(f"Invalid `{index}`")
+                        print(f"Escolha entre 1 a {len(url_list) - 1}.")
+                        sleep(1.5)
+            
+        else:
+            server = 1
+    except Exception as error:
+        print(error)
+    
+    try:
+        zabbixname = url_list[server][0].strip().upper()
+        url = ''
+        for item in url_list[server]:
+            if "://" in item:
+                url = item
+        if not url:
+            url = input("Url Zabbix: ")
+    except IndexError:
+        url = input("Url Zabbix: ")
+    
+    try:
+        api_token = ""
+        if url_list[server][2]:
+            api_token =  url_list[server][2].strip()
+            username = ""
+            passwd = ""
+        if not api_token:
+            while True:
+                username = input("Zabbix User: ")  
+                passwd = getpass("Password")
+                if username and passwd:
+                    break
+    except IndexError:
+        while True:
+            username = input("Zabbix User: ")  
+            passwd = getpass("Password: ")
+            api_token = ""
+            if username and passwd:
+                break
+except FileNotFoundError:
+    try:
+        while True:
+            url = input("Url Zabbix: ")
+            if "://" in url:
+                break
+            else:
+                print(f"Url invalid {url}")
+    except KeyboardInterrupt:
+        print("\nGood bye.")
+        sys.exit(1)
+    try:
+        while True:
+            username = input("Zabbix User: ")  
+            passwd = getpass("Password: ")
+            if username and passwd:
+                break
+    except KeyboardInterrupt:
+        print("\nGood bye.")
+        sys.exit(1)
+
+except KeyboardInterrupt:
+    print("Good bye.")
+    sys.exit(1)
+except Exception as error:
+        print(error)
+        sys.exit(1)
+
+# Zabbix connect
+while True:
+    zapi = ZabbixAPI(url)
+    try: 
+        if api_token:
+            zapi.login(api_token=api_token)
+        else:
+            zapi.login(user=username, password=passwd)
+        
+        print(f"Connected to Zabbix {zabbixname} API Version {zapi.api_version()}.")
+        sleep(1)
+        break
+    except KeyboardInterrupt:
+        print("\nGood bye.")
+        sys.exit(1)
+    except Exception as error:
+        if "Login name or password is incorrect" in str(error):
+            print("Login name or password is incorrect")
+            username = input("Zabbix User: ")  
+            passwd = getpass("Password: ")
+        elif "404 Client Error: Not Found for url" in str(error):
+            print("404 Client Error: Not Found for url")
+            url = input("Url Zabbix: ")
+        elif "Invalid URL" in str(error):
+            print(f"Invalid URL `{url}`.")
+            url = input("Url Zabbix: ")
+        else:
+            print(str(error)) 
+
+
 # Collecting the hosts
+print("Collecting the hosts")
+
 get_hosts = zapi.host.get(
     monitored_host=1,
     output=["hostid", "host", "name"],
@@ -117,22 +235,22 @@ if total_rows > 500000:
 
     for i in tqdm(range(1, parts + 1), ncols=70):
         print(f"     {i} of {parts} parts.")
-        with open(f"{file_csv}_part-{i:>02}.csv", "w", newline="") as csvfile:
-            csv.writer(csvfile, delimiter=",").writerow(["HOST", "ONU", "SINAL", "PON"])
+        with open(f"{file_csv}_part-{i:>02}.csv", "w", encoding="utf-8") as file_:
+            file_.write(",".join("HOST", "ONU", "SINAL", "PON") + "\n")
             for o in tqdm(range(300000), ncols=70, desc=f"Part {i} of {parts}-"):
                 if not num < total_rows:
                     break
                 else:
                     if len(list_result[num]):
-                        csv.writer(csvfile, delimiter=",").writerow(list_result[num])
+                       file_.write(",".join(list_result[num]) + "\n")
                 num += 1
 
 else:
-    with open(f"{file_csv}.csv", "w", newline="") as csvfile:
-        csv.writer(csvfile, delimiter=",").writerow(["HOST", "ONU", "SINAL", "PON"])
+    with open(f"{file_csv}.csv", "w", encoding="utf-8") as file_:
+        file_.write(",".join("HOST", "ONU", "SINAL", "PON") + "\n")
         for row in tqdm(range(total_rows), ncols=70):
             if len(list_result[row]):
-                csv.writer(csvfile, delimiter=",").writerow(list_result[row])
-
+                file_.write(",".join(list_result[row]) + "\n")
+                
 
 print('Completed successfully.')
