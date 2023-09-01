@@ -28,6 +28,25 @@ search_host = {"name": "OLT"}
 
 item_tags = [{"tag": "ONU", "value": "Sinal"}, {"tag": "ONU", "value": "PON"}]
 
+def banner(
+    text: str,
+    border: str="=",
+    ncol: int= 40,
+    bottom_text: str="(Ctrl+C to exit)"
+    ):
+    if len(text) > ncol:
+        ncol = len(text)
+        ncol_c = ""
+        ncol_b = ""
+    else:
+        ncol_c = " " * int((ncol - len(text)) / 2)
+        ncol_b = border * int((ncol - len(bottom_text)) / 2)
+    
+    print(border * ncol)
+    print(ncol_c + text + ncol_c)
+    print(ncol_b + bottom_text + ncol_b)
+    print()
+
 def csv_to_list(filecsv, delimiter=","):
     result = []
     with open(filecsv, encoding="utf-8") as file_:
@@ -37,9 +56,10 @@ def csv_to_list(filecsv, delimiter=","):
     return result
 
 def get_url():
+    banner("Enter the Zabbix url")
     try:
-        while True: # TODO: Adicionar banner de apresentação
-            url = input("Url Zabbix (Crtl+C to exit): ")
+        while True:
+            url = input("Url Zabbix: ")
             if "://" in url:
                 return url
             else:
@@ -49,8 +69,9 @@ def get_url():
         sys.exit()
  
 def get_user_passwd():
+    banner("Enter the username and password")
     try:
-        while True: # TODO: Adicionar banner de apresentação
+        while True:
             username = input("Zabbix User: ").strip() 
             passwd = getpass("Password: ").strip()
             if username and passwd:
@@ -124,17 +145,18 @@ while True:
         sleep(1)
         break
     except Exception as error:
+        os.system('cls' if os.name == 'nt' else 'clear')
         if "name or password" in str(error): 
-            print("Login name or password is incorrect")
+            print("[ERROR] Login name or password is incorrect")
             username, passwd = get_user_passwd()
         elif "Not Found for url" in str(error):
-            print("Not Found for url")
+            print("[ERROR] Not Found for url")
             url = get_url()
         elif "Invalid URL" in str(error):
-            print(str(error))
+            print("[ERROR] " + str(error))
             url = get_url()
         elif "Failed to establish a new connection" in str(error):
-            print(f"Failed to establish a new connection `{url}`.")
+            print(f"[ERROR] Failed to establish a new connection `{url}`.")
             url = get_url()
         else:
             print(str(error)) 
