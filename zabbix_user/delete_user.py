@@ -24,7 +24,9 @@ file_url = os.path.join(path, file_url)
 def file_csv_to_list(file_csv, delimiter=","):
     result = []
     for line in open(file_csv, encoding="UTF-8"):
-        result.append(line.strip("\n").split(delimiter))
+        line = line.strip()
+        if "#" not in line[:4]:
+            result.append(line.split(delimiter))
 
     return result
 
@@ -146,6 +148,3 @@ with open(file_result, "w", encoding="UTF-8") as file_:
     for item in result_list:
         file_.write(",".join(item) + "\n")
     
-       
-
-# %%

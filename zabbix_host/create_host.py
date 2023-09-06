@@ -56,16 +56,18 @@ file_csv = os.path.join(path, filename)
 def file_csv_to_list(file_csv, delimiter=","):
     result = []
     for line in open(file_csv, encoding="UTF-8"):
-        result.append(line.rstrip("\n").split(delimiter))
+        line = line.strip()
+        if "#" not in line[:4]:
+            result.append(line.split(delimiter))
     return result
 
 
 #%%
 def host_tmpl(host: list):
-    parms = dict()
-
-    parms["host"] = host[0].strip()  # Index 0 -> string
-    parms["name"] = host[1].strip()  # Index 1 -> string
+    parms = {
+    "host": host[0].strip(),  # Index 0 -> string
+    "name": host[1].strip(),  # Index 1 -> string
+    }
 
     interface = {
         "type": 1,
