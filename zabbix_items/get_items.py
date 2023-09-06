@@ -37,6 +37,10 @@ def banner(
     if len(text) > ncol:
         ncol = len(text)
         ncol_c = ""
+        ncol_b = border * int((ncol - len(bottom_text)) / 2)
+    if len(bottom_text) > ncol:
+        ncol = len(bottom_text)
+        ncol_c = " " * int((ncol - len(text)) / 2)
         ncol_b = ""
     else:
         ncol_c = " " * int((ncol - len(text)) / 2)
@@ -51,7 +55,9 @@ def csv_to_list(filecsv, delimiter=","):
     result = []
     with open(filecsv, encoding="utf-8") as file_:
         for line in file_:
-            result.append(line.strip("\n").split(delimiter))
+            line = line.strip()
+            if "#" not in line[:4]:
+                result.append(line.split(delimiter))
 
     return result
 
@@ -83,33 +89,36 @@ def get_user_passwd():
 try:
     url_list = csv_to_list(file_url)
 except FileNotFoundError:
-    url_list = [("zabbix_name", "url")]
     url = get_url()
-    url_list.append(("unknown", url))
+    url_list = [("unknown", url)]
 except Exception as error:
         print(error)
         sys.exit(1)
 
-if len(url_list[1:]) > 1:
+if len(url_list) > 1:
     while True:
             os.system("clear")
             print("#" * 40)
             print(f"#{'Choose one of the servers below':^38}#")
             print("#" * 40)
             print()
-            for i in range(1,len(url_list)):
-                print(f" [ {i} ] - Zabbix {url_list[i][0].upper()}")
+            for i in range(len(url_list)):
+                print(f" [ {i + 1} ] - Zabbix {url_list[i][0].upper()}")
             print()
-            index = input("Choose the desired zabbix (Crtl+C to exit): ").strip()
-            if index.isdigit() and 0 < int(index) < len(url_list):
-                server = int(index)
+            try:
+                index = input("Choose the desired zabbix (Crtl+C to exit): ").strip()
+            except KeyboardInterrupt:
+                print("\nGood bye!")
+                sys.exit()
+            if index.isdigit() and 0 < int(index) <= len(url_list):
+                server = int(index) - 1
                 break
             else:
                 print(f"Invalid `{index}`")
                 print(f"Escolha entre 1 a {len(url_list) - 1}.")
                 sleep(1.5)
 else:
-    server = 1
+    server = 0
 
 try:
     zabbixname = url_list[server][0].strip().upper()
@@ -130,6 +139,7 @@ except IndexError:
     api_token = ""
 
 if not api_token:
+    banner(f"Zabbix {zabbixname}", bottom_text="")
     username, passwd = get_user_passwd()
 
 # Zabbix connect
@@ -228,7 +238,7 @@ try:
                     [
                         info["host"],
                         info["name"],
-                        round(float(info["sinal"]), 2) if "sinal" in info else "",
+                        str(round(float(info["sinal"]), 2) if "sinal" in info else ""),
                         info["pon"] if "pon" in info else "",
                     ]
                 )
@@ -241,7 +251,6 @@ except Exception as error:
 
 today = datetime.strftime(datetime.now(), "%Y-%m-%d")
 file_csv = f"onu_sinal_{today}"
-print(len(onu_list))
 print(f"Saving the file {file_csv}")
 total_rows = len(list_result)
 
@@ -254,7 +263,7 @@ if total_rows > 500000:
     for i in tqdm(range(1, parts + 1), ncols=70):
         print(f"     {i} of {parts} parts.")
         with open(f"{file_csv}_part-{i:>02}.csv", "w", encoding="utf-8") as file_:
-            file_.write(",".join("HOST", "ONU", "SINAL", "PON") + "\n")
+            file_.write(",".join(("HOST", "ONU", "SINAL", "PON")) + "\n")
             for o in tqdm(range(300000), ncols=70, desc=f"Part {i} of {parts}-"):
                 if not num < total_rows:
                     break
@@ -265,7 +274,7 @@ if total_rows > 500000:
 
 else:
     with open(f"{file_csv}.csv", "w", encoding="utf-8") as file_:
-        file_.write(",".join("HOST", "ONU", "SINAL", "PON") + "\n")
+        file_.write(",".join(("HOST", "ONU", "SINAL", "PON")) + "\n")
         for row in tqdm(range(total_rows), ncols=70):
             if len(list_result[row]):
                 file_.write(",".join(list_result[row]) + "\n")
