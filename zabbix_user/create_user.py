@@ -109,7 +109,7 @@ def zbx_user_create(zapi, users_list: list):
     result = dict()
     zbx_version = zapi.api_version()[:3]
 
-    for user in users_list[1:]:
+    for user in users_list:
         fullname = user[0].strip().split()
         email = user[1].strip().lower()
         user_role = user[2].strip()
