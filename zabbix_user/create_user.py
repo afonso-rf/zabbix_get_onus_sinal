@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# %%
 import sys
 import os
 from pyzabbix import ZabbixAPI
@@ -7,7 +6,6 @@ from pprint import pprint as pp
 from getpass import getpass
 from time import sleep
 
-# %%
 # Variavbles
 
 path = os.curdir
@@ -173,8 +171,6 @@ def zbx_user_create(zapi, users_list: list):
 
     return result
 
-# %%
-
 file_csv = os.path.join(path, filename)
 file_url = os.path.join(path, file_url)
 
@@ -193,11 +189,38 @@ except Exception as error:
     print(error)
     sys.exit(1)
 
-result = dict() # TODO: gerar arquivo com o resultado
+result = dict() 
+list_result = [['user','password']]
+users = dict()
+
 for zbx_srv in url_list:
     zapi = zbx_connect(zbx_srv)
     resp = zbx_user_create(zapi, users_list)
     result[zbx_srv[0]] = resp
 
-# %%
-pp(result)
+for server , users_info in result.items():
+    list_result[0].append(server)
+    for user, info in users_info.items():
+        if user in users:
+            users[user]['result'].append(info["result"])
+            if info.get("password") is not None:
+                users[user]['passwd'] = info["password"]
+        else:
+            users[user] = {
+                "passwd": info.get("password"),
+                "result": [info["result"]]
+            }
+
+for user, info in users.items():
+    list_result.append(
+        (
+            user,
+            info['passwd'] if info['passwd'] else "N/A",
+            *info["result"]
+        )
+    )
+
+with open('create_result.csv', 'w', encoding="utf-8") as file_:
+    for item in list_result:
+        file_.write(",".join(item) + "\n")
+    
