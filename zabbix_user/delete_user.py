@@ -5,13 +5,13 @@ import sys
 from pyzabbix import ZabbixAPI
 from pprint import pprint as pp
 from getpass import getpass
-
+from datetime import datetime
 # %%
 # Variavbles
 
 path = os.curdir
 filename = "delete_users.csv"
-file_url = "urlserver.csv"
+file_url = "file_url.csv"
 
 arguments = sys.argv[1:] # TODO: Tratar exceptions
 # if arguments:
@@ -31,6 +31,7 @@ def file_csv_to_list(file_csv, delimiter=","):
     return result
 
 # %%
+# TODO: Tratar erro de user/senha
 def zbx_user_delete(users_list: list, url: str, api_token=None):
     username = ''
     passwd = ''
@@ -53,7 +54,7 @@ def zbx_user_delete(users_list: list, url: str, api_token=None):
     result = dict()
     zbx_version = zapi.api_version()[:3]
 
-    for user in users_list[1:]:
+    for user in users_list:
         fullname = user[0].strip()
         email = user[1].strip().lower()
         username = email.split("@")[0]
@@ -142,7 +143,8 @@ for serv, users in result.items():
             result_list.append([info["name"], user, info["result"]])
             
 #%%
-file_result = os.path.join(path, "delete_result.csv")
+today = datetime.strftime(datetime.now(), "%Y-%m-%d_%H-%M")
+file_result = os.path.join(path, f"delete_result_{today}.csv")
 with open(file_result, "w", encoding="UTF-8") as file_:
     file_.write("name,username," + ",".join(servernames) + "\n")
     for item in result_list:
