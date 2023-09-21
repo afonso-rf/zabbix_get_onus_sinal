@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
+
 import sys
 import os
 from pyzabbix import ZabbixAPI
 from pprint import pprint as pp
 from getpass import getpass
 from time import sleep
-
+from datetime import datetime
 # Variavbles
 
 path = os.curdir
@@ -115,9 +116,9 @@ def zbx_user_create(zapi, users_list: list):
 
         username = email.split("@")[0]
         passwd = (
-            f"{fullname[0][:2].lower()}"
+            f"{username[:2].lower()}"
             f"{len(email):>02}"
-            f"{fullname[1][:3].upper() if len(fullname) > 1 else fullname[0][-3:].upper()}"
+            f"{username.split('.')[1][:3].upper() if len(username.split('.')) > 1  else username[-3:].upper()}"
             f"{len(user[0]):>02}"
             "#Mudar"
         )
@@ -219,8 +220,9 @@ for user, info in users.items():
             *info["result"]
         )
     )
-
-with open('create_result.csv', 'w', encoding="utf-8") as file_:
+today = datetime.strftime(datetime.now(), "%Y-%m-%d_%H-%M")
+file_result = os.path.join(path, f"create_result_{today}.csv")
+with open(file_result, 'w', encoding="utf-8") as file_:
     for item in list_result:
         file_.write(",".join(item) + "\n")
     
