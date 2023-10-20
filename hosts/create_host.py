@@ -25,18 +25,18 @@ __author__ = "Afonso Filho"
 # %%
 from pyzabbix import ZabbixAPI
 from pprint import pprint as pp
-from dotenv import load_dotenv
 from getpass import getpass
+from datetime import datetime
 import os
 import sys
 
 # %%
 # Variables
-load_dotenv()
-url = os.getenv("URL")
-username = os.getenv("ZBX_USERNAME") or None
-passwd = os.getenv("ZBX_PASSWD") or None
-api_token = os.getenv("ZBX_TOKEN_API") or None
+# TODO: Adicionar lista de servidores e interação para adição
+url = input("Url Zabbix: ").strip()
+username = ""
+passwd = ""
+api_token = ""
 
 # url = "http://localhost:8080/"
 # username = "Admin"
@@ -212,18 +212,18 @@ result = [["HOST NAME", "STATUS"]]
 
 host_list = file_csv_to_list(file_csv, ";")
 # Addcion hosts
-for i in range(1, len(host_list)):
-    host_date = host_tmpl(host_list[i])
-    hostname = host_date["host"]
-    groups = host_date["groups"]
-    templates = host_date["templates"]
-    proxy = host_date["proxy_hostid"]
+for i in range(len(host_list)):
+    host_data = host_tmpl(host_list[i])
+    hostname = host_data["host"]
+    groups = host_data["groups"]
+    templates = host_data["templates"]
+    proxy = host_data["proxy_hostid"]
     
     
-    if host_date["interfaces"]["ip"] != "":
-        ip_dns =  "ip", host_date["interfaces"]["ip"]
+    if host_data["interfaces"]["ip"] != "":
+        ip_dns =  "ip", host_data["interfaces"]["ip"]
     else:
-        ip_dns =   "dns", host_date["interfaces"]["dns"]
+        ip_dns =   "dns", host_data["interfaces"]["dns"]
 
     group_invalid = []
     if groups != []:
@@ -247,11 +247,11 @@ for i in range(1, len(host_list)):
     if proxy:
         proxyid = zapi.proxy.get(filter={"host": proxy})
         if proxyid != []:
-            host_date["proxy_hostid"] = proxyid[0]["proxyid"]
+            host_data["proxy_hostid"] = proxyid[0]["proxyid"]
         else:
-            del host_date["proxy_hostid"]
+            del host_data["proxy_hostid"]
     else:
-        del host_date["proxy_hostid"]
+        del host_data["proxy_hostid"]
     
     if not hostname:
         print("Sem hostname")
@@ -264,31 +264,33 @@ for i in range(1, len(host_list)):
             ip_valid = zapi.hostinterface.get(filter={"dns": ip_dns[1]})
             
         if hosts_valid != []:
-            print(f"`{host_date['name']}` host already registered")
-            result.append([host_date["name"], "host already registered"])
+            print(f"`{host_data['name']}` host already registered")
+            result.append([host_data["name"], "host already registered"])
         elif " " in hostname:
-            print(f"`{host_date['name']}` incorrect characters used")
-            result.append([host_date["name"], "Incorrect characters used"])
+            print(f"`{host_data['name']}` incorrect characters used")
+            result.append([host_data["name"], "Incorrect characters used"])
         elif ip_valid != []:
-            print(f"`{host_date['name']}` IP or DNS already registered")
-            result.append([host_date["name"], f"IP or DNS already registered `{ip_dns}`"])
+            print(f"`{host_data['name']}` IP or DNS already registered")
+            result.append([host_data["name"], f"IP or DNS already registered `{ip_dns}`"])
         elif group_invalid != []:
-            print(f"`{host_date['name']}` Hostgroup unknown `{group_invalid}`")
-            result.append([host_date["name"], f"Hostgroup unknown `{group_invalid}`"])
+            print(f"`{host_data['name']}` Hostgroup unknown `{group_invalid}`")
+            result.append([host_data["name"], f"Hostgroup unknown `{group_invalid}`"])
         elif template_invalid != []:
-            print(f"`{host_date['name']}` Template unknown `{template_invalid}`")
-            result.append([host_date["name"], f"Template unknown `{template_invalid}`"])
+            print(f"`{host_data['name']}` Template unknown `{template_invalid}`")
+            result.append([host_data["name"], f"Template unknown `{template_invalid}`"])
 
         else:
             print("Unregistered host")
-            print(f"Starting `{host_date['name']}` registration")
-            new_host = zapi.host.create(host_date)
+            print(f"Starting `{host_data['name']}` registration")
+            # TODO: Adição do try/except para tratativa de erro no zapi.host.create
+            new_host = zapi.host.create(host_data)
             print(f"Successfully")
-            result.append([host_date["name"], "Successfully"])
+            result.append([host_data["name"], "Successfully"])
 
 # %%
-file_result = os.path.join(path, "result.csv")
-with open(file_result, "w", encoding="UTF-8") as file_:
-    for line in result:
-        file_.write(";".join(line) + "\n")
+today = datetime.strftime(datetime.now(), "%Y-%m-%d_%H-%M")
+file_result = os.path.join(path, f"create_result_{today}.csv")
+with open(file_result, 'w', encoding="utf-8") as file_:
+    for item in result:
+        file_.write(",".join(item) + "\n")
 # %%
