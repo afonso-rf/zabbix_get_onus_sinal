@@ -63,10 +63,10 @@ def get_user_passwd():
         print("\nGood bye!")
         sys.exit()
 
-def zbx_connect(zbx_srv: list):
+def zbx_connect(*zbx_srv):
     zbxname = zbx_srv[0].upper().strip()
     url = zbx_srv[1].strip()
-    
+    banner(f'Connect Zabbix {zbxname}',bottom_text="")
     try:
         api_token = zbx_srv[2].strip()
     except IndexError:
@@ -86,10 +86,8 @@ def zbx_connect(zbx_srv: list):
             break
         except Exception as error:
             os.system('cls' if os.name == 'nt' else 'clear')
-            print(f'Connect Zabbix {zbxname}.')
             if "name or password" in str(error): 
                 print("[ERROR] Login name or password is incorrect")
-                username, passwd = get_user_passwd()
             elif "Not Found for url" in str(error):
                 print("[ERROR] Not Found for url")
                 url = get_url()
@@ -195,7 +193,7 @@ list_result = [['user','password']]
 users = dict()
 
 for zbx_srv in url_list:
-    zapi = zbx_connect(zbx_srv)
+    zapi = zbx_connect(*zbx_srv)
     resp = zbx_user_create(zapi, users_list)
     result[zbx_srv[0]] = resp
 
