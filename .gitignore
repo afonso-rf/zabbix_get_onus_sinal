@@ -1,7 +1,8 @@
+env
+.env
+venv
 .venv
 .vscode
-.env
-onu_sinal*
 *.rar
 *test*
 *.csv
