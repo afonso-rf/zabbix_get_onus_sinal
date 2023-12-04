@@ -29,6 +29,7 @@ from getpass import getpass
 from datetime import datetime
 import os
 import sys
+import urllib3
 
 # %%
 # Variables
@@ -63,7 +64,7 @@ def file_csv_to_list(file_csv, delimiter=","):
 
 
 #%%
-def host_tmpl(host: list):
+def host_tmpl(*host):
     parms = {
     "host": host[0].strip(),  # Index 0 -> string
     "name": host[1].strip(),  # Index 1 -> string
@@ -195,6 +196,9 @@ def host_tmpl(host: list):
 # TODO: Criar interação para solicitação de user/senha
 # Zabbix connect
 zapi = ZabbixAPI(url)
+# Disable SSL
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+zapi.session.verify = False
 while True:
     if api_token:
         zapi.login(api_token=api_token)
@@ -211,9 +215,10 @@ pp(f"Connected to Zabbix API Version {zapi.api_version()}.")
 result = [["HOST NAME", "STATUS"]]
 
 host_list = file_csv_to_list(file_csv, ";")
+
 # Addcion hosts
 for i in range(len(host_list)):
-    host_data = host_tmpl(host_list[i])
+    host_data = host_tmpl(*host_list[i])
     hostname = host_data["host"]
     groups = host_data["groups"]
     templates = host_data["templates"]
