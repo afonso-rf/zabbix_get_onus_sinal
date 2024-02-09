@@ -5,8 +5,7 @@ from pyzabbix import ZabbixAPI, ZabbixAPIException
 import urllib3
 from time import sleep
 from datetime import datetime
-from modules.gets import get_user_passwd, get_url, get_date_month
-from modules.banner import banner
+from modules import get_user_passwd, get_url, get_date_month, banner
 
 
 
@@ -120,7 +119,9 @@ def get_problems(
         for e in problem["acknowledges"]:
             msg = ""
             if e.get("message"):
-                msg = e["message"].strip().replace("\n", "/") 
+                msg = e["message"].strip().replace("\n", "/")
+                msg = msg.replace("\r", "/")
+                msg = msg.replace(",", " | ")
             messages.append(msg)
         
         messages_join = ";".join(messages)
@@ -174,9 +175,9 @@ def host_info(**host_get_return: dict) -> dict:
     }
     
     if host_get_return.get("hostgroups"):
-        groups, *_ = [i["name"] for i in host_get_return["hostgroups"]]
+        groups = [i["name"] for i in host_get_return["hostgroups"]]
     else:
-        groups, *_ = [[i["name"] for i in host_get_return["groups"]]]  # Zabbix <=6.0
+        groups = [i["name"] for i in host_get_return["groups"]] # Zabbix <=6.0
     host["hostgroups"] = ";".join(groups)
 
     macros = []
@@ -192,9 +193,4 @@ def host_info(**host_get_return: dict) -> dict:
     return host
 
 
-if __name__ == "__main__":
-    localhost = ["mob","http://mob.cloudprovtel.com/",]
-    zapi = zbx_connect()
-    zbx_version = float(zapi.api_version()[:3])
-    print(zbx_version)
-    
+#if __name__ == "__main__":
