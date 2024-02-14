@@ -8,39 +8,34 @@ from datetime import datetime
 from modules import get_user_passwd, get_url, get_date_month, banner
 
 
+def zbx_connect(zbxname: str = "Zabbix", url: str = "", api_token: str = ""):
 
-def zbx_connect(
-    zbxname: str = "Zabbix",
-    url: str = "",
-    api_token: str = ""
-        ):
-    
     zbxname = zbxname.upper().strip()
     if not url:
         url = get_url(zbxname)
     url = url.strip()
     api_token = api_token.strip()
-    
-    banner(f'Connect Zabbix {zbxname}',bottom_text="")
-    
+
+    banner(f"Connect Zabbix {zbxname}", bottom_text="")
+
     while True:
         zapi = ZabbixAPI(url)
         urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
         zapi.session.verify = False
 
-        try: 
+        try:
             if api_token:
                 zapi.login(api_token=api_token)
             else:
                 username, passwd = get_user_passwd(zbxname)
                 zapi.login(username, passwd)
-            
+
             print(f"Connected to Zabbix {zbxname} API Version {zapi.api_version()}.")
             sleep(1)
             break
         except ZabbixAPIException as error:
-            os.system('cls' if os.name == 'nt' else 'clear')
-            if "name or password" in str(error): 
+            os.system("cls" if os.name == "nt" else "clear")
+            if "name or password" in str(error):
                 print("[ERROR] Login name or password is incorrect")
             elif "Not Found for url" in str(error):
                 print("[ERROR] Not Found for url")
@@ -52,8 +47,8 @@ def zbx_connect(
                 print(f"[ERROR] Failed to establish a new connection `{url}`.")
                 url = get_url(zbxname)
             else:
-                print('aqui')
-                print(type(error).__name__, error) 
+                print("aqui")
+                print(type(error).__name__, error)
                 sys.exit(1)
         except Exception as error:
             if type(error).__name__ == "MissingSchema":
@@ -63,10 +58,11 @@ def zbx_connect(
                 print("Connection error: Enter the correct URL")
                 url = get_url(zbxname)
             else:
-                print(f'[ERRO] {type(error).__name__}: {error}') 
+                print(f"[ERRO] {type(error).__name__}: {error}")
                 sys.exit(1)
-            
+
     return zapi
+
 
 def get_problems(
     zapi: ZabbixAPI,
@@ -82,7 +78,7 @@ def get_problems(
     alert_name = alert_name
 
     time_from, time_till, *_ = get_date_month(month, year)
-    
+
     resolveds = dict()
     for resolved in zapi.event.get(
         hostids=hostid,
@@ -123,7 +119,7 @@ def get_problems(
                 msg = msg.replace("\r", "/")
                 msg = msg.replace(",", " | ")
             messages.append(msg)
-        
+
         messages_join = ";".join(messages)
         clock = int(clock)
         r_clock = int(r_clock)
@@ -142,10 +138,12 @@ def get_problems(
         problems.append(info)
     return problems
 
+
 def parms_get_hosts(
     zbx_version: float = 6.0,
     search: dict | None = {},
     filter: dict | None = {},
+    **kwargs,
 ) -> dict:
     zbx_version = zbx_version
     parms = {
@@ -154,13 +152,15 @@ def parms_get_hosts(
         "selectMacros": ["macro", "value"],
         "search": search,
         "filter": filter,
+        "searchByAny": True,
+        **kwargs,
     }
-    
-    if zbx_version >= 6:
+
+    if zbx_version > 6:
         parms["selectHostGroups"] = ["name", "groupid"]  # Zabbix >=6.0
     else:
         parms["selectGroups"] = ["name", "groupid"]  # Zabbix <=6.0
-        
+
     return parms
 
 
@@ -173,11 +173,11 @@ def host_info(**host_get_return: dict) -> dict:
         "tags": "",
         "macros": "",
     }
-    
+
     if host_get_return.get("hostgroups"):
         groups = [i["name"] for i in host_get_return["hostgroups"]]
     else:
-        groups = [i["name"] for i in host_get_return["groups"]] # Zabbix <=6.0
+        groups = [i["name"] for i in host_get_return["groups"]]  # Zabbix <=6.0
     host["hostgroups"] = ";".join(groups)
 
     macros = []
@@ -191,6 +191,3 @@ def host_info(**host_get_return: dict) -> dict:
     host["tags"] = ";".join(tags)
 
     return host
-
-
-#if __name__ == "__main__":
