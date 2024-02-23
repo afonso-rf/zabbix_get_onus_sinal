@@ -11,14 +11,14 @@ from datetime import datetime
 
 path = os.curdir
 filename = "delete_users.csv"
-file_url = "file_url.csv"
+file_url = "../file_url.csv"
 
 arguments = sys.argv[1:] # TODO: Tratar exceptions
 # if arguments:
 #     filename = arguments[0]
        
 file_csv = os.path.join(path, filename)
-file_url = os.path.join(path, file_url)
+#file_url = os.path.join(path, file_url)
 
 # %%
 def file_csv_to_list(file_csv, delimiter=","):

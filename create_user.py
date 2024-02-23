@@ -7,100 +7,13 @@ from pprint import pprint as pp
 from getpass import getpass
 from time import sleep
 from datetime import datetime
+from modules import csv_to_list, banner, get_url, get_user_passwd, zbx_connect
 # Variavbles
 
-path = os.curdir
+path = os.path.abspath(os.path.dirname(__file__))
 filename = "create_users.csv"
 file_url = "file_url.csv"
 
-def csv_to_list(file_csv, delimiter=","):
-    result = []
-    for line in open(file_csv, encoding="UTF-8"):
-        line = line.strip()
-        if "#" not in line[:4]:
-            result.append(line.split(delimiter))
-
-    return result
-
-def banner(
-    text: str, border: str = "=", ncol: int = 40, bottom_text: str = "(Ctrl+C to exit)"
-):
-    if len(text) > ncol:
-        ncol = len(text)
-        ncol_c = ""
-        ncol_b = ""
-    else:
-        ncol_c = " " * int((ncol - len(text)) / 2)
-        ncol_b = border * int((ncol - len(bottom_text)) / 2)
-
-    print(border * ncol)
-    print(ncol_c + text + ncol_c)
-    print(ncol_b + bottom_text + ncol_b)
-    print()
-
-def get_url():
-    banner("Enter the Zabbix url")
-    try:
-        while True:
-            url = input("Url Zabbix: ")
-            if "://" in url:
-                return url
-            else:
-                print(f"Url invalid {url}")
-    except KeyboardInterrupt:
-        print("\nGood bye!")
-        sys.exit()
-
-def get_user_passwd():
-    banner("Enter the username and password")
-    try:
-        while True:
-            username = input("Zabbix User: ").strip()
-            passwd = getpass("Password: ").strip()
-            if username and passwd:
-                return username, passwd
-    except KeyboardInterrupt:
-        print("\nGood bye!")
-        sys.exit()
-
-def zbx_connect(*zbx_srv):
-    zbxname = zbx_srv[0].upper().strip()
-    url = zbx_srv[1].strip()
-    banner(f'Connect Zabbix {zbxname}',bottom_text="")
-    try:
-        api_token = zbx_srv[2].strip()
-    except IndexError:
-        api_token = ""
-    
-    while True:
-        zapi = ZabbixAPI(url)
-        try: 
-            if api_token:
-                zapi.login(api_token=api_token)
-            else:
-                username, passwd = get_user_passwd()
-                zapi.login(user=username, password=passwd)
-            
-            print(f"Connected to Zabbix {zbxname} API Version {zapi.api_version()}.")
-            sleep(1)
-            break
-        except Exception as error:
-            os.system('cls' if os.name == 'nt' else 'clear')
-            if "name or password" in str(error): 
-                print("[ERROR] Login name or password is incorrect")
-            elif "Not Found for url" in str(error):
-                print("[ERROR] Not Found for url")
-                url = get_url()
-            elif "Invalid URL" in str(error):
-                print("[ERROR] " + str(error))
-                url = get_url()
-            elif "Failed to establish a new connection" in str(error):
-                print(f"[ERROR] Failed to establish a new connection `{url}`.")
-                url = get_url()
-            else:
-                print(str(error)) 
-                sys.exit(1)
-    return zapi
 
 def zbx_user_create(zapi, users_list: list):
     result = dict()
@@ -171,7 +84,7 @@ def zbx_user_create(zapi, users_list: list):
     return result
 
 file_csv = os.path.join(path, filename)
-file_url = os.path.join(path, file_url)
+# file_url = os.path.join(path, file_url)
 
 try:
     users_list = csv_to_list(file_csv)
