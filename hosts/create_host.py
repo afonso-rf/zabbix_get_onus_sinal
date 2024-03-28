@@ -27,6 +27,7 @@ from pyzabbix import ZabbixAPI
 from pprint import pprint as pp
 from getpass import getpass
 from datetime import datetime
+import csv
 import os
 import sys
 import urllib3
@@ -56,12 +57,13 @@ file_csv = os.path.join(path, filename)
 # %%
 def file_csv_to_list(file_csv, delimiter=","):
     result = []
-    for line in open(file_csv, encoding="UTF-8"):
-        line = line.strip()
-        if "#" not in line[:4]:
-            result.append(line.split(delimiter))
+    with open(file_csv, "r", encoding="UTF-8") as csvfile:
+        file_csv = csv.reader(csvfile, delimiter=delimiter, lineterminator="\n")
+        for line in file_csv:
+            if not "#" in line[0][:5]:
+                result.append(line)
+    
     return result
-
 
 #%%
 def host_tmpl(*host):
@@ -111,8 +113,7 @@ def host_tmpl(*host):
         elif "3" in host[5].strip().lower():
             # TODO: Adicionar auth/privpassphrase e auth/privprotocol
             details["version"] = 3
-            details["contextname"] = host[5].split(",")[1].strip()
-            details["securityname"] = host[5].split(",")[2].strip()
+            details["contextname"], details["securityname"] = host[5].split(",").strip()
 
         interface["details"] = details
     elif host[3].strip().lower() == "ipmi":  # Index 3 -> interface type
@@ -214,7 +215,7 @@ pp(f"Connected to Zabbix API Version {zapi.api_version()}.")
 # %%
 result = [["HOST NAME", "STATUS"]]
 
-host_list = file_csv_to_list(file_csv, ";")
+host_list = file_csv_to_list(file_csv, ",")
 
 # Addcion hosts
 for i in range(len(host_list)):
@@ -296,6 +297,7 @@ for i in range(len(host_list)):
 today = datetime.strftime(datetime.now(), "%Y-%m-%d_%H-%M")
 file_result = os.path.join(path, f"create_result_{today}.csv")
 with open(file_result, 'w', encoding="utf-8") as file_:
+    spamwriter = csv.writer(file_, lineterminator="\n")
     for item in result:
-        file_.write(",".join(item) + "\n")
+        spamwriter.writerow(item)
 # %%
