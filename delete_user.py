@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # %%
 import os
-import sys
+import sys, csv
 from pyzabbix import ZabbixAPI
 from pprint import pprint as pp
-from getpass import getpass
 from datetime import datetime
+from modules import csv_to_list
+
 # %%
 # Variavbles
 
@@ -13,28 +14,19 @@ path = os.curdir
 filename = "delete_users.csv"
 file_url = "../file_url.csv"
 
-arguments = sys.argv[1:] # TODO: Tratar exceptions
+arguments = sys.argv[1:]  # TODO: Tratar exceptions
 # if arguments:
 #     filename = arguments[0]
-       
+
 file_csv = os.path.join(path, filename)
-#file_url = os.path.join(path, file_url)
+# file_url = os.path.join(path, file_url)
 
-# %%
-def file_csv_to_list(file_csv, delimiter=","):
-    result = []
-    for line in open(file_csv, encoding="UTF-8"):
-        line = line.strip()
-        if "#" not in line[:4]:
-            result.append(line.split(delimiter))
-
-    return result
 
 # %%
 # TODO: Tratar erro de user/senha
 def zbx_user_delete(users_list: list, url: str, api_token=None):
-    username = ''
-    passwd = ''
+    username = ""
+    passwd = ""
     # Zabbix connect
     zapi = ZabbixAPI(url)
     while True:
@@ -47,9 +39,8 @@ def zbx_user_delete(users_list: list, url: str, api_token=None):
         else:
             username = input("User Zabbix: ").strip()
             passwd = getpass("Password: ").strip()
-            
-    pp(f"Connected to Zabbix API Version {zapi.api_version()}.")
 
+    pp(f"Connected to Zabbix API Version {zapi.api_version()}.")
 
     result = dict()
     zbx_version = zapi.api_version()[:3]
@@ -66,8 +57,7 @@ def zbx_user_delete(users_list: list, url: str, api_token=None):
             exist = zapi.user.get(filter={"username": username})
         else:
             exist = zapi.user.get(filter={"alias": username})
-        
-        
+
         if exist == []:
             pp(f"User `{username}` unknown")
             result[username]["result"] = "unknown"
@@ -81,14 +71,14 @@ def zbx_user_delete(users_list: list, url: str, api_token=None):
                     print("Zabbix User no permissions to delete")
                     result[username]["result"] = "Zbx User no permissions to delete"
 
-    
     return result
-#%%
 
-users_list = file_csv_to_list(file_csv)
-url_servers = file_csv_to_list(file_url)
 
-#%%
+# %%
+users_list = csv_to_list(file_csv)
+url_servers = csv_to_list(file_url)
+
+# %%
 result = dict()
 for info in url_servers:
     try:
@@ -100,33 +90,33 @@ for info in url_servers:
         else:
             server_name = "Unknown"
     except IndexError:
-        server_name =  "Unknown"   
-    
+        server_name = "Unknown"
+
     try:
         if info[1]:
-            if "//"  in info[1]:
+            if "//" in info[1]:
                 url = info[1]
             else:
                 url = "url error"
         else:
             url = "Unknown"
     except IndexError:
-        url =  "Unknown"   
-    
+        url = "Unknown"
+
     try:
         if info[2]:
             api_token = info[2]
         else:
-            api_token = ""    
+            api_token = ""
     except IndexError:
         api_token = ""
-    
-    print(f'Deleting users in Zabbix {server_name}.')
+
+    print(f"Deleting users in Zabbix {server_name}.")
     # TODO: Adicionar testes de conexão no Zabbix
     resp = zbx_user_delete(users_list, url, api_token)
     result[server_name] = resp
-    
-#%%  
+
+# %%
 resp = dict()
 result_list = []
 servernames = []
@@ -141,12 +131,11 @@ for serv, users in result.items():
                 break
         if not exist:
             result_list.append([info["name"], user, info["result"]])
-            
-#%%
+
+# %%
 today = datetime.strftime(datetime.now(), "%Y-%m-%d_%H-%M")
 file_result = os.path.join(path, f"delete_result_{today}.csv")
 with open(file_result, "w", encoding="UTF-8") as file_:
     file_.write("name,username," + ",".join(servernames) + "\n")
     for item in result_list:
         file_.write(",".join(item) + "\n")
-    

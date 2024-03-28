@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
 
 import sys
-import os
-from pyzabbix import ZabbixAPI
-from pprint import pprint as pp
-from getpass import getpass
-from time import sleep
+import os, csv
 from datetime import datetime
 from modules import csv_to_list, banner, get_url, get_user_passwd, zbx_connect
+
 # Variavbles
 
 path = os.path.abspath(os.path.dirname(__file__))
@@ -39,7 +36,7 @@ def zbx_user_create(zapi, users_list: list):
             "surname": " ".join(fullname[1:]).title(),
             "passwd": passwd,
         }
-        
+
         if username not in result:
             result[username] = {}
         if float(zbx_version) >= 6:
@@ -52,15 +49,17 @@ def zbx_user_create(zapi, users_list: list):
 
         usrgrp = zapi.usergroup.get(filter={"name": user_group})
 
+        result[username]["fullname"] = " ".join(fullname).title()
+
         if already_exist != []:
-            pp(f"User `{username}` already registered")
+            print(f"User `{username}` already registered")
             result[username]["result"] = "existing"
         elif float(zbx_version) >= 5.2 and role == []:
             result[username]["result"] = "unknown role"
-            pp(f"Unknown `{user_role}` role.")
+            print(f"Unknown `{user_role}` role.")
         elif usrgrp == []:
             result[username]["result"] = "unknown group"
-            pp(f"Unknown `{user_group}` group.")
+            print(f"Unknown `{user_group}` group.")
         else:
             if float(zbx_version) < 6:
                 usr["alias"] = username
@@ -72,16 +71,17 @@ def zbx_user_create(zapi, users_list: list):
 
             if float(zbx_version) >= 5.2:
                 usr["medias"] = [{"mediatypeid": "1", "sendto": [email]}]
-            else:    
+            else:
                 usr["user_medias"] = [{"mediatypeid": "1", "sendto": [email]}]
 
             usr["usrgrps"] = [{"usrgrpid": usrgrp[0]["usrgrpid"]}]
             zapi.user.create(usr)
             result[username]["password"] = passwd
             result[username]["result"] = "success"
-            pp(f" Successfully created user `{username}`.")
+            print(f" Successfully created user `{username}`.")
 
     return result
+
 
 file_csv = os.path.join(path, filename)
 # file_url = os.path.join(path, file_url)
@@ -96,13 +96,13 @@ try:
     url_list = csv_to_list(file_url)
 except FileNotFoundError:
     url = get_url()
-    url_list =[("unknown", url)]
+    url_list = [("unknown", url)]
 except Exception as error:
     print(error)
     sys.exit(1)
 
-result = dict() 
-list_result = [['user','password']]
+result = dict()
+list_result = [["name", "user", "password"]]
 users = dict()
 
 for zbx_srv in url_list:
@@ -110,30 +110,33 @@ for zbx_srv in url_list:
     resp = zbx_user_create(zapi, users_list)
     result[zbx_srv[0]] = resp
 
-for server , users_info in result.items():
+for server, users_info in result.items():
     list_result[0].append(server)
     for user, info in users_info.items():
         if user in users:
-            users[user]['result'].append(info["result"])
+            users[user]["result"].append(info["result"])
             if info.get("password") is not None:
-                users[user]['passwd'] = info["password"]
+                users[user]["passwd"] = info["password"]
         else:
             users[user] = {
+                "name": info.get("fullname"),
                 "passwd": info.get("password"),
-                "result": [info["result"]]
+                "result": [info["result"]],
             }
 
 for user, info in users.items():
     list_result.append(
         (
+            info["name"],
             user,
-            info['passwd'] if info['passwd'] else "N/A",
-            *info["result"]
+            info["passwd"] if info["passwd"] else "N/A",
+            *info["result"],
         )
     )
+
 today = datetime.strftime(datetime.now(), "%Y-%m-%d_%H-%M")
 file_result = os.path.join(path, f"create_result_{today}.csv")
-with open(file_result, 'w', encoding="utf-8") as file_:
+with open(file_result, "w", encoding="utf-8") as file_:
+    file_csv = csv.writer(file_, lineterminator="\n")
     for item in list_result:
-        file_.write(",".join(item) + "\n")
-    
+        file_csv.writerow(item)
