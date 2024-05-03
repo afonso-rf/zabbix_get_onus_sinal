@@ -27,8 +27,8 @@ from pyzabbix import ZabbixAPI
 from pprint import pprint as pp
 from getpass import getpass
 from datetime import datetime
+from pathlib import Path
 import csv
-import os
 import sys
 import urllib3
 
@@ -50,14 +50,14 @@ arguments = sys.argv[1:]
 # if arguments:
 #     filename = arguments[0]
 
-path = os.curdir
-file_csv = os.path.join(path, filename)
+ROOT_PATH = Path(__file__).parent
+FILE_CSV_PATH = ROOT_PATH / filename
 
 
 # %%
 def file_csv_to_list(file_csv, delimiter=","):
     result = []
-    with open(file_csv, "r", encoding="UTF-8") as csvfile:
+    with open(file_csv, "r", encoding="utf-8") as csvfile:
         file_csv = csv.reader(csvfile, delimiter=delimiter, lineterminator="\n")
         for line in file_csv:
             if not "#" in line[0][:5]:
@@ -215,7 +215,7 @@ pp(f"Connected to Zabbix API Version {zapi.api_version()}.")
 # %%
 result = [["HOST NAME", "STATUS"]]
 
-host_list = file_csv_to_list(file_csv, ",")
+host_list = file_csv_to_list(FILE_CSV_PATH, ",")
 
 # Addcion hosts
 for i in range(len(host_list)):
@@ -295,7 +295,7 @@ for i in range(len(host_list)):
 
 # %%
 today = datetime.strftime(datetime.now(), "%Y-%m-%d_%H-%M")
-file_result = os.path.join(path, f"create_result_{today}.csv")
+file_result = ROOT_PATH / f"create_result_{today}.csv"
 with open(file_result, 'w', encoding="utf-8") as file_:
     spamwriter = csv.writer(file_, lineterminator="\n")
     for item in result:
