@@ -3,8 +3,10 @@
 import sys
 import os, csv
 from datetime import datetime
-from modules import csv_to_list, banner, get_url, get_user_passwd, zbx_connect
-
+from modules.get_csv import csv_to_list
+from modules.gets import get_url, get_user_passwd
+from modules.zbx import zbx_connect
+from modules.banner import banner
 # Variavbles
 
 path = os.path.abspath(os.path.dirname(__file__))
@@ -22,7 +24,7 @@ def zbx_user_create(zapi, users_list: list):
         user_role = user[2].strip()
         user_group = user[3].strip()
 
-        username = email.split("@")[0]
+        username = email.split("@")[0] if "alloha.com" in email else email
         passwd = (
             f"{username[:2].lower()}"
             f"{len(email):>02}"
@@ -32,10 +34,17 @@ def zbx_user_create(zapi, users_list: list):
         )
 
         usr = {
-            "name": fullname[0].title(),
-            "surname": " ".join(fullname[1:]).title(),
             "passwd": passwd,
+            "autologin": 1,
+            "autologout": "0",
+            "refresh": "2m",
         }
+        
+        if len(fullname) <= 2 and len(fullname[1]) < 5:
+            usr["name"] = " ".join(fullname).title()
+        else:
+            usr["name"] = fullname[0].title()
+            usr["surname"] = " ".join(fullname[1:]).title()
 
         if username not in result:
             result[username] = {}
@@ -135,7 +144,8 @@ for user, info in users.items():
     )
 
 today = datetime.strftime(datetime.now(), "%Y-%m-%d_%H-%M")
-file_result = os.path.join(path, f"create_result_{today}.csv")
+file_result = os.path.join(path, f"user_created_result_{today}.csv")
+
 with open(file_result, "w", encoding="utf-8") as file_:
     file_csv = csv.writer(file_, lineterminator="\n")
     for item in list_result:

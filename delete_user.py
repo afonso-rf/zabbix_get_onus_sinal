@@ -5,14 +5,15 @@ import sys, csv
 from pyzabbix import ZabbixAPI
 from pprint import pprint as pp
 from datetime import datetime
-from modules import csv_to_list
+from modules.get_csv import csv_to_list
+from modules.gets import get_user_passwd
 
 # %%
 # Variavbles
 
 path = os.curdir
 filename = "delete_users.csv"
-file_url = "../file_url.csv"
+file_url = "file_url.csv"
 
 arguments = sys.argv[1:]  # TODO: Tratar exceptions
 # if arguments:
@@ -37,8 +38,7 @@ def zbx_user_delete(users_list: list, url: str, api_token=None):
             zapi.login(username, passwd)
             break
         else:
-            username = input("User Zabbix: ").strip()
-            passwd = getpass("Password: ").strip()
+            username, passwd = get_user_passwd()
 
     pp(f"Connected to Zabbix API Version {zapi.api_version()}.")
 
